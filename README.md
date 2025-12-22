@@ -2,6 +2,9 @@
 
 A simulator for optimizing Electric Truck charging station turnover using auction-based prioritization.
 
+<img width="368" height="348" alt="image" src="https://github.com/user-attachments/assets/9ad4bb85-7c9b-4642-9ca0-54b041d2f660" />
+
+
 ## Features
 - **Benchmark Mode**: Real-time side-by-side comparison of FIFO vs SIRQ.
 - **Metrics**: Tracks Revenue, Wait Time, and Critical Delivery Failures.

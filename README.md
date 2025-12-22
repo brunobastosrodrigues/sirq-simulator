@@ -17,4 +17,5 @@ A simulator for optimizing Electric Truck charging station turnover using auctio
 
 ## Docker Support
 `docker build -t sirq .`
+
 `docker run -p 8501:8501 sirq`

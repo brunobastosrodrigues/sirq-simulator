@@ -2,3 +2,5 @@ venv/
 __pycache__/
 results/
 *.DS_Store
+# Private context folder
+private_docs/

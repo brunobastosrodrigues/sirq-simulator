@@ -14,6 +14,9 @@ DEFAULT_CONFIG = {
     "prob_critical": 0.20,       # 20% High Priority
     "prob_standard": 0.60,       # 60% Normal
     "prob_economy": 0.20,        # 20% Low Priority
+    
+    # Simulation
+    "traffic_multiplier": 1.0    # 1.0 = Normal, 1.5 = Heavy, etc.
 }
 
 # --- AGENT PROFILES (The Logic) ---

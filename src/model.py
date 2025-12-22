@@ -49,10 +49,14 @@ class ChargingStationModel(mesa.Model):
         minute = self.schedule.steps % 1440
         hour = minute // 60
         
-        # Probabilities
+        # Base Probabilities
         if 6 <= hour < 10 or 15 <= hour < 19: prob = 0.35 # Peak
         elif 0 <= hour < 6: prob = 0.05
         else: prob = 0.15
+        
+        # --- APPLY TRAFFIC MULTIPLIER (For Sensitivity Analysis) ---
+        multiplier = self.config.get("traffic_multiplier", 1.0)
+        prob = prob * multiplier
         
         if self.random.random() < prob:
             self.current_id += 1
@@ -114,7 +118,7 @@ class ChargingStationModel(mesa.Model):
             "Bid": agent.bid,
             "Outcome": reason,
             "Wait_Time": agent.wait_time,
-            "Strategy": self.strategy  # <--- THIS WAS MISSING
+            "Strategy": self.strategy  # <--- CRITICAL FIX for Analysis
         })
 
     def _log_system_state(self):

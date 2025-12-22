@@ -114,11 +114,12 @@ class ChargingStationModel(mesa.Model):
         self.agent_log.append({
             "ID": agent.unique_id,
             "Profile": agent.profile_type,
-            "Urgency": round(agent.urgency, 3),
-            "Bid": agent.bid,
+            "Urgency": round(agent.urgency, 3) if hasattr(agent, 'urgency') else 0, # Legacy safety
+            "Value_of_Time": round(agent.value_of_time, 2),  # <--- NEW METRIC
+            "Bid": round(agent.bid, 2),
             "Outcome": reason,
             "Wait_Time": agent.wait_time,
-            "Strategy": self.strategy  # <--- CRITICAL FIX for Analysis
+            "Strategy": self.strategy
         })
 
     def _log_system_state(self):

@@ -3,3 +3,4 @@ mesa==2.1.2
 pandas==2.2.0
 numpy==1.26.4
 plotly==5.19.0
+statsmodels==0.14.1

@@ -1,15 +1,13 @@
 # SIRQ: System for Interactive Reservation and Queueing
 ### A Market-Based Mechanism for Electric Logistics Infrastructure
 
-**SIRQ** is a scientific simulation platform designed to evaluate the economic and operational impact of replacing First-In-First-Served (FIFO) queues with **Real-Time Auctions** for electric truck charging.
+**SIRQ** is a simulation platform designed to evaluate the economic and operational impact of replacing First-In-First-Served (FIFO) queues with **Real-Time Auctions** for electric truck charging.
 
 <img width="600" alt="SIRQ Dashboard" src="https://github.com/user-attachments/assets/9ad4bb85-7c9b-4642-9ca0-54b041d2f660" />
 
 ---
 
-## 🧪 Scientific Objectives
-This platform is built to answer four key Research Questions (RQs) for high-impact journals (e.g., *Transportation Research Part C*, *EJOR*):
-
+## 🧪 Key goals
 * **RQ1: Economic Efficiency:** Does an auction mechanism maximize infrastructure revenue compared to FIFO?
 * **RQ2: Supply Chain Resilience:** Can dynamic prioritization prevent "System Collapse" for critical Just-In-Time (JIT) logistics?
 * **RQ3: Micro-Economic Rationality:** How do heterogeneous agents (High vs. Low Value-of-Time) behave under pricing pressure?
@@ -25,19 +23,19 @@ Agents are no longer simple rule-based entities. They act as **Rational Economic
 * **Price Sensitivity:** Elasticity of demand based on profile type.
 * **Dynamic Bidding:** Bids are calculated in real-time based on `Base Fee + (VOT * Expected Wait)`.
 
-### 2. Monte Carlo Laboratory
+### 2. Monte Carlo Simulations
 * **Batch Processing:** Run N=30 to N=200 simulations in parallel to generate statistically significant datasets (N > 30 for Central Limit Theorem).
 * **Parameter Sweeps:** Automatically test across multiple Traffic Loads (0.8x to 2.0x capacity).
 * **Confidence Intervals:** Automatic calculation of 95% CI for all revenue and wait-time metrics.
 
-### 3. Deep Dive Analytics Suite
+### 3. Analytics
 A dedicated module (`src/analytics.py`) generating 24+ scientific plots, including:
 * **Violin Plots & ECDFs** for Wait Time distributions.
 * **Gini Coefficients** to measure inequality.
 * **Scatter Plots (OLS Regression)** to verify Bidding Rationality.
 * **Welfare Analysis** calculating total societal economic loss.
 
-### 4. Reproducibility & Peer Review
+### 4. Reproducibility
 * **Data Manager:** Export the full experiment (Summary Statistics + Agent-Level Micro-Logs) as a verifiable `.zip` file.
 * **Import:** Reviewers can load the ZIP file to reproduce the exact graphs without re-running the simulation.
 

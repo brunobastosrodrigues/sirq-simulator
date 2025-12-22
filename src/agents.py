@@ -1,27 +1,36 @@
 import mesa
 import numpy as np
-from src.config import *
+from src.config import TRUCK_PROFILES
 
 class TruckAgent(mesa.Agent):
-    def __init__(self, unique_id, model, urgency):
+    def __init__(self, unique_id, model, profile_type, config):
         super().__init__(unique_id, model)
-        # -- State --
+        self.profile_type = profile_type
+        self.config = config
+        
+        # Load Profile Data
+        profile_data = TRUCK_PROFILES[profile_type]
+        
+        # -- Physics --
         self.soc = np.random.randint(10, 30)
-        self.initial_soc = self.soc # Track starting point
+        self.initial_soc = self.soc
         self.target_soc = 85
-        self.urgency = urgency
         
-        # -- Economics --
-        base_bid = np.random.uniform(10, 20)
-        self.bid = round(base_bid * (1 + (self.urgency * 4)), 2)
+        # -- Urgency & Bidding --
+        u_min, u_max = profile_data["urgency_range"]
+        self.urgency = np.random.uniform(u_min, u_max)
         
-        # -- Precise Timing Metrics --
+        # Bid Calculation: Base Price + (Urgency * Multiplier * Randomness)
+        base_bid = 15.0 # Base entry fee
+        self.bid = round(base_bid * (1 + (self.urgency * profile_data["bid_multiplier"])), 2)
+        
+        # -- Visuals --
+        self.color = profile_data["color"]
+        self.border = profile_data["border"]
+        
+        # -- Metrics --
         self.arrival_step = self.model.schedule.steps
-        self.start_charge_step = None
-        self.end_charge_step = None
         self.wait_time = 0
-        
-        # -- Performance Metrics --
         self.charged_kwh = 0
         self.status = "Queuing" 
 
@@ -33,29 +42,31 @@ class TruckAgent(mesa.Agent):
 
     def _wait(self):
         self.wait_time += 1
-        patience_limit = MAX_WAIT_MINUTES * (1 + self.urgency) 
-        if self.wait_time > patience_limit:
+        # Patience based on Profile
+        p_factor = TRUCK_PROFILES[self.profile_type]["patience_factor"]
+        max_wait = 90 * p_factor
+        
+        if self.wait_time > max_wait:
             self.model.log_departure(self, "Left (Impatient)")
             self.model.grid.remove_agent(self)
             self.model.schedule.remove(self)
 
     def _charge(self):
-        # Capture start time
-        if self.start_charge_step is None:
-            self.start_charge_step = self.model.schedule.steps
-
-        # Physics & Inefficiency Logic
-        kwh_added = CHARGER_POWER_KW / 60.0
-        # Simulated CC-CV curve: Charging slows above 80%
-        efficiency_factor = 1.0 if self.soc < 80 else 0.5
+        # Use Dynamic Config for Power
+        power = self.config["charger_power"]
+        capacity = self.config["battery_capacity"]
         
-        real_kwh = kwh_added * efficiency_factor
-        real_soc = (real_kwh / TRUCK_BATTERY_CAPACITY) * 100
+        kwh_added = power / 60.0
+        # Efficiency Curve (slower > 80%)
+        efficiency = 1.0 if self.soc < 80 else 0.5
+        
+        real_kwh = kwh_added * efficiency
+        real_soc = (real_kwh / capacity) * 100
 
         self.soc += real_soc
         self.charged_kwh += real_kwh
         self.model.kpi_energy_sold += real_kwh
-        self.model.kpi_revenue += (real_kwh * PRICE_PER_KWH)
+        self.model.kpi_revenue += (real_kwh * self.config["price_per_kwh"])
 
         if self.soc >= self.target_soc:
             self.model.log_departure(self, "Completed")

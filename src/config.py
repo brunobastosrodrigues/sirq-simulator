@@ -12,9 +12,14 @@ DEFAULT_CONFIG = {
     "auction_increment": 5.0,    # $ (Min step to outbid someone)
     
     # Preemption Logic (The "Kick-out" threshold)
-    # A challenger must bid at least X times the current user's bid to preempt them.
     # 1.2 means you must pay 20% more than the incumbent to take their spot.
     "preemption_premium": 1.2,   
+    
+    # --- SMART PRICING (NEW EXTENSION) ---
+    # Dynamic pricing based on station utilization (Queue + Active / Total Spots)
+    "enable_smart_pricing": True, # Toggle dynamic congestion pricing
+    "surge_sensitivity": 0.5,     # Aggressiveness: 0.5 means price rises 50% at 100% utilization
+    "max_price_cap": 2.00,        # Regulatory Cap ($/kWh)
     
     # --- TRAFFIC MIX (Probabilities must sum to 1.0) ---
     "prob_critical": 0.20,       # 20% High Priority (Perishable/JIT)
@@ -26,21 +31,19 @@ DEFAULT_CONFIG = {
 }
 
 # --- AGENT PROFILES (SCIENTIFIC & ECONOMIC) ---
-# "Value of Time" (VOT) is the key metric for Transport Economics.
-# It represents the monetary loss per hour of waiting.
-
 TRUCK_PROFILES = {
     "CRITICAL": {
         # Profile: Just-In-Time (JIT) Logistics, Perishable Goods, Medical
         # Behavior: Cannot afford to wait. Will pay massive premiums.
         
         # Economic Parameters
-        "vot_range": (150.0, 300.0), # $ Value of Time per Hour (High penalty for lateness)
-        "price_sensitivity": 0.1,    # Inelastic: Will pay high prices (Low sensitivity)
+        "vot_range": (150.0, 300.0), # $ Value of Time per Hour
+        "price_sensitivity": 0.1,    # Inelastic
+        "max_price_tolerance": 5.00, # $ Willingness to Pay per kWh (High tolerance)
         
         # Queue Behavior
-        "patience": 240,             # Minutes: Will wait 4 hours before "Failure" (Desperate)
-        "urgency_range": (0.8, 1.0), # Legacy Metric (0-1 score)
+        "patience": 240,             # Minutes
+        "urgency_range": (0.8, 1.0), 
         
         # Visuals
         "color": "#ff4b4b",          # Red
@@ -49,15 +52,16 @@ TRUCK_PROFILES = {
     
     "STANDARD": {
         # Profile: Corporate Fleets, FMCG, Scheduled Delivery
-        # Behavior: Rational economic actors. Trade off time vs money efficiently.
+        # Behavior: Rational economic actors.
         
         # Economic Parameters
-        "vot_range": (50.0, 80.0),   # $ Value of Time per Hour (Driver wages + Fuel)
-        "price_sensitivity": 0.5,    # Elastic: Balances cost vs speed
+        "vot_range": (50.0, 80.0),   # $ Value of Time per Hour
+        "price_sensitivity": 0.5,    # Elastic
+        "max_price_tolerance": 1.50, # $ Willingness to Pay per kWh
         
         # Queue Behavior
-        "patience": 120,             # Minutes: Will wait 2 hours max
-        "urgency_range": (0.4, 0.7), # Legacy Metric
+        "patience": 120,             # Minutes
+        "urgency_range": (0.4, 0.7), 
         
         # Visuals
         "color": "#3498db",          # Blue
@@ -65,17 +69,17 @@ TRUCK_PROFILES = {
     },
     
     "ECONOMY": {
-        # Profile: Owner-Operators, Bulk Haulage (Sand/Gravel), Empty Returns
-        # Behavior: Highly price sensitive. Profit margins are thin. 
-        # Fairness Note: These agents suffer "Starvation" in SIRQ systems.
+        # Profile: Owner-Operators, Bulk Haulage, Empty Returns
+        # Behavior: Highly price sensitive. 
         
         # Economic Parameters
-        "vot_range": (15.0, 30.0),   # $ Value of Time per Hour (Low margin)
-        "price_sensitivity": 0.9,    # Highly Elastic: Will leave if price surges
+        "vot_range": (15.0, 30.0),   # $ Value of Time per Hour
+        "price_sensitivity": 0.9,    # Highly Elastic
+        "max_price_tolerance": 0.80, # $ Willingness to Pay per kWh (Low tolerance)
         
         # Queue Behavior
-        "patience": 45,              # Minutes: Leaves quickly to find cheaper station
-        "urgency_range": (0.0, 0.3), # Legacy Metric
+        "patience": 45,              # Minutes
+        "urgency_range": (0.0, 0.3), 
         
         # Visuals
         "color": "#95a5a6",          # Gray

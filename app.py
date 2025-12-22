@@ -36,7 +36,7 @@ page = st.sidebar.radio("Navigate", [
 ])
 
 # =========================================================
-# PAGE 1: CONCEPT & DEMO (Restored & Enhanced)
+# PAGE 1: CONCEPT & DEMO
 # =========================================================
 if page == "1. Concept & Demo":
     st.title("SIRQ: System for Interactive Reservation and Queueing")
@@ -44,7 +44,6 @@ if page == "1. Concept & Demo":
     
     st.divider()
 
-    # Rich Text Section
     col_text, col_img = st.columns([1.3, 1])
     
     with col_text:
@@ -64,6 +63,7 @@ if page == "1. Concept & Demo":
         **Core Mechanisms:**
         * **Dynamic Prioritization:** The queue is sorted by Bid Price, not Arrival Time.
         * **Preemption:** High-value agents can "bump" low-value agents (with a price premium).
+        * **Smart Pricing (New):** Prices now surge dynamically with congestion, causing price-sensitive agents to balk.
         * **Economic Agents:** Simulation agents act rationally based on their specific *Value of Time* profiles.
         """)
 
@@ -77,7 +77,7 @@ if page == "1. Concept & Demo":
     st.divider()
     st.subheader("🔴 Live Digital Twin")
     
-    with st.expander("⚙️ Control Panel & Legend", expanded=True):
+    with st.expander("⚙️ Simulation Settings & Legend", expanded=True):
         c1, c2 = st.columns([1, 2])
         with c1:
             st.markdown("**Agent Legend:**")
@@ -85,9 +85,10 @@ if page == "1. Concept & Demo":
             st.markdown("🟦 **Standard:** Medium VOT ($65/hr).")
             st.markdown("⬜ **Economy:** Low VOT ($20/hr). Elastic demand.")
         with c2:
+            st.markdown("**Control Panel:**")
             cc1, cc2, cc3 = st.columns(3)
-            with cc1: load = st.select_slider("Traffic", ["Normal", "Heavy", "Extreme"], value="Heavy")
-            with cc2: speed = st.select_slider("Speed", ["Normal", "Fast"], value="Fast")
+            with cc1: load = st.select_slider("Traffic Density", ["Normal", "Heavy", "Extreme"], value="Heavy")
+            with cc2: speed = st.select_slider("Sim Speed", ["Normal", "Fast"], value="Fast")
             with cc3: 
                 st.write("")
                 start_btn = st.button("▶️ Run Comparative Demo", type="primary", use_container_width=True)
@@ -125,7 +126,7 @@ elif page == "2. Scientific Simulation (Lab)":
     st.markdown("Generate statistical evidence by running **N** simulations per scenario.")
     
     with st.expander("ℹ️ Inspect Economic Agent Profiles", expanded=False):
-        st.dataframe(pd.DataFrame(TRUCK_PROFILES).T[["vot_range", "patience", "urgency_range"]], use_container_width=True)
+        st.dataframe(pd.DataFrame(TRUCK_PROFILES).T[["vot_range", "patience", "urgency_range", "max_price_tolerance"]], use_container_width=True)
     
     with st.form("mc_form"):
         c1, c2 = st.columns(2)
@@ -155,7 +156,7 @@ elif page == "2. Scientific Simulation (Lab)":
                     log = pd.DataFrame(m.agent_log)
                     cw = log.query("Profile=='CRITICAL'")['Wait_Time'].mean() if not log.empty else 0
                     ew = log.query("Profile=='ECONOMY'")['Wait_Time'].mean() if not log.empty else 0
-                    results.append({"Run_ID": i, "Traffic_Load": l, "Strategy": s, "Revenue": m.kpi_revenue, "Critical_Failures": m.kpi_failed_critical, "Avg_Wait_Critical": cw, "Avg_Wait_Economy": ew, "Preemptions": m.kpi_preemptions})
+                    results.append({"Run_ID": i, "Traffic_Load": l, "Strategy": s, "Revenue": m.kpi_revenue, "Critical_Failures": m.kpi_failed_critical, "Avg_Wait_Critical": cw, "Avg_Wait_Economy": ew, "Balked_Agents": m.kpi_balked_agents, "Preemptions": m.kpi_preemptions})
                     
                     # Log Micro (Only 1 run per config to save RAM)
                     if i == 0:
@@ -187,7 +188,6 @@ elif page == "3. Deep Dive Analytics":
         
         with tab1:
             st.header("RQ1: Economic Efficiency & Utilization")
-            st.markdown("*Does SIRQ maximize infrastructure utility compared to FIFO?*")
             st.plotly_chart(plotter.rq1_revenue_ci(), use_container_width=True)
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq1_revenue_dist(), use_container_width=True)
@@ -196,10 +196,11 @@ elif page == "3. Deep Dive Analytics":
             with c3: st.plotly_chart(plotter.rq1_utilization_proxy(), use_container_width=True)
             with c4: st.plotly_chart(plotter.rq1_opportunity_cost(), use_container_width=True)
             st.plotly_chart(plotter.rq1_revenue_stability(), use_container_width=True)
+            st.markdown("### 🏷️ Smart Pricing Dynamics")
+            st.plotly_chart(plotter.rq1_pricing_dynamics(), use_container_width=True)
 
         with tab2:
             st.header("RQ2: Service Reliability (Critical Chains)")
-            st.markdown("*Can SIRQ prevent collapse of critical logistics under high load?*")
             st.plotly_chart(plotter.rq2_critical_wait_box(), use_container_width=True)
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq2_failure_rate(), use_container_width=True)
@@ -216,7 +217,6 @@ elif page == "3. Deep Dive Analytics":
 
         with tab3:
             st.header("RQ3: Micro-Economic Rationality")
-            st.markdown("*Are agents behaving rationally? Is the market clearing correctly?*")
             if df_micro is not None:
                 st.plotly_chart(plotter.rq3_bidding_rationality(), use_container_width=True)
                 c1, c2 = st.columns(2)
@@ -229,8 +229,8 @@ elif page == "3. Deep Dive Analytics":
 
         with tab4:
             st.header("RQ4: Social Equity & Redistribution")
-            st.markdown("*Evaluating the trade-off between Efficiency and Fairness.*")
             st.plotly_chart(plotter.rq4_equity_gap(), use_container_width=True)
+            st.plotly_chart(plotter.rq4_starvation_scatter(), use_container_width=True) # RESTORED
             c1, c2 = st.columns(2)
             with c1: 
                 f = plotter.rq4_gini_coefficient()
@@ -241,8 +241,8 @@ elif page == "3. Deep Dive Analytics":
             
             st.divider()
             st.subheader("💰 Policy Solution: Redistribution")
-            st.markdown("This Surplus Revenue can be used to subsidize Economy drivers.")
             st.plotly_chart(plotter.rq4_subsidy_potential(), use_container_width=True)
+            st.plotly_chart(plotter.rq4_access_rate(), use_container_width=True)
 
 # =========================================================
 # PAGE 4: DATA MANAGER (FIXED ZIP SUPPORT)
@@ -255,7 +255,6 @@ elif page == "4. Data Manager":
     with c1:
         st.subheader("📤 Export Experiment")
         if st.session_state['monte_carlo_df'] is not None:
-            # Create ZIP in memory
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr("summary.csv", st.session_state['monte_carlo_df'].to_csv(index=False))

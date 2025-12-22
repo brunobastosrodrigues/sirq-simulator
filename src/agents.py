@@ -14,7 +14,6 @@ class TruckAgent(mesa.Agent):
         self.border = profile_data["border"]
         
         # --- 2. Determine "Value of Time" (VOT) ---
-        # How much money do I lose per hour of waiting?
         vot_min, vot_max = profile_data["vot_range"]
         self.value_of_time = np.random.uniform(vot_min, vot_max)
         
@@ -39,11 +38,9 @@ class TruckAgent(mesa.Agent):
         queue_len = len([a for a in self.model.schedule.agents if a.status == "Queuing"])
         estimated_wait_hours = (queue_len * 15) / 60.0 
         
-        # If queue is empty, expect 0 wait, but bid minimum to enter
         if estimated_wait_hours < 0.1: estimated_wait_hours = 0.1
         
         # THE CORE FORMULA
-        # We add a little randomness (10%) to simulate imperfect human info
         rational_bid = base_fee + (self.value_of_time * estimated_wait_hours)
         noise = np.random.uniform(0.9, 1.1) 
         
@@ -61,7 +58,7 @@ class TruckAgent(mesa.Agent):
         # --- Dynamic Bidding (Panic Logic) ---
         # If I am CRITICAL and I've waited too long, I panic and raise my bid.
         if self.profile_type == "CRITICAL" and self.wait_time % 30 == 0:
-            self.bid += (self.value_of_time / 4) # Add 15 mins worth of value to the bid
+            self.bid += (self.value_of_time / 4) 
         
         # --- Patience / Leaving Logic ---
         patience_limit = TRUCK_PROFILES[self.profile_type]["patience"]
@@ -72,7 +69,6 @@ class TruckAgent(mesa.Agent):
             self.model.schedule.remove(self)
 
     def _charge(self):
-        # Physics logic remains standard
         power = self.config["charger_power"]
         capacity = self.config["battery_capacity"]
         
@@ -82,7 +78,11 @@ class TruckAgent(mesa.Agent):
         real_soc = (real_kwh / capacity) * 100
 
         self.soc += real_soc
-        self.model.kpi_revenue += (real_kwh * self.config["price_per_kwh"])
+        
+        # --- REVENUE CALCULATION (SMART PRICING) ---
+        # The revenue is calculated based on the CURRENT dynamic price
+        price_to_pay = self.model.current_price
+        self.model.kpi_revenue += (real_kwh * price_to_pay)
 
         if self.soc >= self.target_soc:
             self.model.log_departure(self, "Completed")

@@ -5,7 +5,7 @@ import os
 import datetime
 import json
 from src.agents import TruckAgent
-from src.config import DEFAULT_CONFIG
+from src.config import DEFAULT_CONFIG, TRUCK_PROFILES
 
 class ChargingStationModel(mesa.Model):
     def __init__(self, num_chargers, strategy="FIFO", seed=None, user_config=None):
@@ -32,17 +32,57 @@ class ChargingStationModel(mesa.Model):
         self.kpi_revenue = 0
         self.kpi_preemptions = 0
         self.kpi_failed_critical = 0
+        self.kpi_balked_agents = 0  # NEW: Count of lost customers
+        
+        # State
+        self.current_price = self.config["price_per_kwh"]
+        
         self.agent_log = []
         self.system_log = []
 
         self.running = True
 
     def step(self):
+        # 1. Update Market Conditions (Smart Pricing)
+        self._update_smart_pricing()
+        
+        # 2. Spawn New Traffic
         self._spawn_traffic()
-        if self.strategy == "FIFO": self._logic_fifo()
-        elif self.strategy == "SIRQ": self._logic_sirq()
+        
+        # 3. Execute Queue Logic
+        if self.strategy == "FIFO": 
+            self._logic_fifo()
+        elif self.strategy == "SIRQ": 
+            self._logic_sirq()
+            
+        # 4. Advance Agents
         self.schedule.step()
         self._log_system_state()
+
+    def _update_smart_pricing(self):
+        """
+        Updates the electricity price based on real-time congestion (Surge Pricing).
+        Formula: Price = Base * (1 + Sensitivity * Utilization)
+        """
+        if not self.config.get("enable_smart_pricing", False):
+            self.current_price = self.config["price_per_kwh"]
+            return
+
+        # Calculate Utilization (Active + Queue / Capacity)
+        active = len([a for a in self.schedule.agents if a.status == "Charging"])
+        queued = len([a for a in self.schedule.agents if a.status == "Queuing"])
+        total_load = active + queued
+        
+        capacity = max(self.num_chargers, 1)
+        utilization_ratio = total_load / capacity
+        
+        # Surge Logic
+        surge_factor = self.config["surge_sensitivity"]
+        base_price = self.config["price_per_kwh"]
+        
+        # Calculate new price with Regulatory Cap
+        new_price = base_price * (1 + (surge_factor * utilization_ratio))
+        self.current_price = min(new_price, self.config["max_price_cap"])
 
     def _spawn_traffic(self):
         # Time-of-day logic
@@ -54,13 +94,11 @@ class ChargingStationModel(mesa.Model):
         elif 0 <= hour < 6: prob = 0.05
         else: prob = 0.15
         
-        # --- APPLY TRAFFIC MULTIPLIER (For Sensitivity Analysis) ---
+        # Apply Traffic Multiplier
         multiplier = self.config.get("traffic_multiplier", 1.0)
         prob = prob * multiplier
         
         if self.random.random() < prob:
-            self.current_id += 1
-            
             # --- PROFILE SELECTION ---
             p_crit = self.config["prob_critical"]
             p_std = self.config["prob_standard"]
@@ -73,6 +111,15 @@ class ChargingStationModel(mesa.Model):
             
             profile = np.random.choice(choices, p=weights)
             
+            # --- SMART PRICING: BALKING CHECK ---
+            # If the current price is too high, the agent leaves immediately.
+            if self.config.get("enable_smart_pricing", False):
+                tolerance = TRUCK_PROFILES[profile]["max_price_tolerance"]
+                if self.current_price > tolerance:
+                    self.kpi_balked_agents += 1
+                    return # Agent does not enter system
+            
+            self.current_id += 1
             agent = TruckAgent(self.current_id, self, profile, self.config)
             self.schedule.add(agent)
             self.grid.place_agent(agent, (0, 0))
@@ -114,8 +161,8 @@ class ChargingStationModel(mesa.Model):
         self.agent_log.append({
             "ID": agent.unique_id,
             "Profile": agent.profile_type,
-            "Urgency": round(agent.urgency, 3) if hasattr(agent, 'urgency') else 0, # Legacy safety
-            "Value_of_Time": round(agent.value_of_time, 2),  # <--- NEW METRIC
+            "Urgency": round(agent.urgency, 3) if hasattr(agent, 'urgency') else 0,
+            "Value_of_Time": round(agent.value_of_time, 2),
             "Bid": round(agent.bid, 2),
             "Outcome": reason,
             "Wait_Time": agent.wait_time,
@@ -127,5 +174,7 @@ class ChargingStationModel(mesa.Model):
             "Step": self.schedule.steps,
             "Total_Revenue": round(self.kpi_revenue, 2),
             "Queue_Length": len([a for a in self.schedule.agents if a.status == "Queuing"]),
-            "Strategy": self.strategy
+            "Strategy": self.strategy,
+            "Current_Price": round(self.current_price, 2), # Log Dynamic Price
+            "Balked_Agents": self.kpi_balked_agents
         })

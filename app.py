@@ -51,41 +51,29 @@ if page == "1. Concept & Demo":
         <div class="concept-box">
         <div class="big-font">
         <b>The Problem:</b> Traditional "First-Come-First-Served" (FIFO) queues are inefficient for heterogeneous logistics. 
-        A truck carrying perishable medicine often waits behind a truck carrying gravel, simply because it arrived 5 minutes later.
         <br><br>
-        <b>The Solution:</b> SIRQ implements a <span class="highlight">Real-Time Vickrey-Clarke-Groves (VCG) Inspired Auction</span>. 
-        Agents bid for slots based on their Value of Time (VOT). The system dynamically reorders the queue to minimize aggregate economic loss.
+        <b>The Solution:</b> SIRQ implements a <span class="highlight">Real-Time Auction + Smart Pricing</span>. 
+        This comparison evaluates how **Surge Pricing** interacts with both FIFO and Auction strategies.
         </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        **Core Mechanisms:**
-        * **Dynamic Prioritization:** The queue is sorted by Bid Price, not Arrival Time.
-        * **Preemption:** High-value agents can "bump" low-value agents (with a price premium).
-        * **Smart Pricing (New):** Prices now surge dynamically with congestion, causing price-sensitive agents to balk.
-        * **Economic Agents:** Simulation agents act rationally based on their specific *Value of Time* profiles.
-        """)
 
     with col_img:
         if os.path.exists("station_diagram.png"):
             st.image("station_diagram.png", caption="Fig 1: SIRQ Station Topology", use_column_width=True)
-        else:
-            st.warning("Diagram not found. Please upload 'station_diagram.png'.")
 
     # Interactive Demo
     st.divider()
     st.subheader("🔴 Live Digital Twin")
     
-    with st.expander("⚙️ Simulation Settings & Legend", expanded=True):
+    with st.expander("⚙️ Simulation Settings", expanded=True):
         c1, c2 = st.columns([1, 2])
         with c1:
             st.markdown("**Agent Legend:**")
-            st.markdown("🟥 **Critical (VIP):** High VOT ($150+/hr). Bids aggressively.")
-            st.markdown("🟦 **Standard:** Medium VOT ($65/hr).")
-            st.markdown("⬜ **Economy:** Low VOT ($20/hr). Elastic demand.")
+            st.markdown("🟥 **Critical (VIP):** High VOT. High Price Tolerance.")
+            st.markdown("🟦 **Standard:** Medium VOT.")
+            st.markdown("⬜ **Economy:** Low VOT. Low Price Tolerance (Will Balk).")
         with c2:
-            st.markdown("**Control Panel:**")
             cc1, cc2, cc3 = st.columns(3)
             with cc1: load = st.select_slider("Traffic Density", ["Normal", "Heavy", "Extreme"], value="Heavy")
             with cc2: speed = st.select_slider("Sim Speed", ["Normal", "Fast"], value="Fast")
@@ -114,8 +102,10 @@ if page == "1. Concept & Demo":
                 bar.progress((i+1)/1440)
                 ph1.markdown(render_station_visual(fifo), unsafe_allow_html=True)
                 ph2.markdown(render_station_visual(sirq), unsafe_allow_html=True)
-                m1.info(f"Rev: ${int(fifo.kpi_revenue)} | Failures: {fifo.kpi_failed_critical}")
-                m2.success(f"Rev: ${int(sirq.kpi_revenue)} | Failures: {sirq.kpi_failed_critical}")
+                
+                # Show Price in Real-time Metric
+                m1.info(f"**Rev:** ${int(fifo.kpi_revenue)} | **Failures:** {fifo.kpi_failed_critical}\n\n**Price:** ${fifo.current_price:.2f}/kWh | **Lost:** {fifo.kpi_balked_agents}")
+                m2.success(f"**Rev:** ${int(sirq.kpi_revenue)} | **Failures:** {sirq.kpi_failed_critical}\n\n**Price:** ${sirq.current_price:.2f}/kWh | **Lost:** {sirq.kpi_balked_agents}")
                 time.sleep(sleep)
 
 # =========================================================
@@ -123,10 +113,10 @@ if page == "1. Concept & Demo":
 # =========================================================
 elif page == "2. Scientific Simulation (Lab)":
     st.title("⚡ Scientific Validation (Monte Carlo)")
-    st.markdown("Generate statistical evidence by running **N** simulations per scenario.")
+    st.markdown("Run batch simulations to generate statistical evidence.")
     
     with st.expander("ℹ️ Inspect Economic Agent Profiles", expanded=False):
-        st.dataframe(pd.DataFrame(TRUCK_PROFILES).T[["vot_range", "patience", "urgency_range", "max_price_tolerance"]], use_container_width=True)
+        st.dataframe(pd.DataFrame(TRUCK_PROFILES).T[["vot_range", "patience", "max_price_tolerance"]], use_container_width=True)
     
     with st.form("mc_form"):
         c1, c2 = st.columns(2)
@@ -156,7 +146,20 @@ elif page == "2. Scientific Simulation (Lab)":
                     log = pd.DataFrame(m.agent_log)
                     cw = log.query("Profile=='CRITICAL'")['Wait_Time'].mean() if not log.empty else 0
                     ew = log.query("Profile=='ECONOMY'")['Wait_Time'].mean() if not log.empty else 0
-                    results.append({"Run_ID": i, "Traffic_Load": l, "Strategy": s, "Revenue": m.kpi_revenue, "Critical_Failures": m.kpi_failed_critical, "Avg_Wait_Critical": cw, "Avg_Wait_Economy": ew, "Balked_Agents": m.kpi_balked_agents, "Preemptions": m.kpi_preemptions})
+                    
+                    # NEW: Capture Average System Price for the run
+                    sys_log = pd.DataFrame(m.system_log)
+                    avg_sys_price = sys_log["Current_Price"].mean() if not sys_log.empty else 0.50
+                    
+                    results.append({
+                        "Run_ID": i, "Traffic_Load": l, "Strategy": s, 
+                        "Revenue": m.kpi_revenue, 
+                        "Critical_Failures": m.kpi_failed_critical, 
+                        "Avg_Wait_Critical": cw, "Avg_Wait_Economy": ew, 
+                        "Balked_Agents": m.kpi_balked_agents, 
+                        "Preemptions": m.kpi_preemptions,
+                        "Avg_System_Price": avg_sys_price # For Analytics
+                    })
                     
                     # Log Micro (Only 1 run per config to save RAM)
                     if i == 0:
@@ -184,7 +187,7 @@ elif page == "3. Deep Dive Analytics":
     else:
         plotter = ScientificPlotter(df, df_micro)
         
-        tab1, tab2, tab3, tab4 = st.tabs(["RQ1: Efficiency", "RQ2: Reliability", "RQ3: Micro-Econ", "RQ4: Equity"])
+        tab1, tab2, tab3, tab4 = st.tabs(["RQ1: Efficiency", "RQ2: Reliability", "RQ3: Pricing & Rationality", "RQ4: Equity"])
         
         with tab1:
             st.header("RQ1: Economic Efficiency & Utilization")
@@ -192,12 +195,10 @@ elif page == "3. Deep Dive Analytics":
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq1_revenue_dist(), use_container_width=True)
             with c2: st.plotly_chart(plotter.rq1_revenue_delta(), use_container_width=True)
+            
             c3, c4 = st.columns(2)
             with c3: st.plotly_chart(plotter.rq1_utilization_proxy(), use_container_width=True)
-            with c4: st.plotly_chart(plotter.rq1_opportunity_cost(), use_container_width=True)
-            st.plotly_chart(plotter.rq1_revenue_stability(), use_container_width=True)
-            st.markdown("### 🏷️ Smart Pricing Dynamics")
-            st.plotly_chart(plotter.rq1_pricing_dynamics(), use_container_width=True)
+            with c4: st.plotly_chart(plotter.rq1_revenue_stability(), use_container_width=True)
 
         with tab2:
             st.header("RQ2: Service Reliability (Critical Chains)")
@@ -205,6 +206,7 @@ elif page == "3. Deep Dive Analytics":
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq2_failure_rate(), use_container_width=True)
             with c2: st.plotly_chart(plotter.rq2_ecdf_wait(), use_container_width=True)
+            
             c3, c4 = st.columns(2)
             with c3: 
                 f = plotter.rq2_max_wait_analysis()
@@ -212,37 +214,39 @@ elif page == "3. Deep Dive Analytics":
             with c4: 
                 f = plotter.rq2_on_time_performance()
                 if f: st.plotly_chart(f, use_container_width=True)
-            f = plotter.rq2_preemption_turbulence()
-            if f: st.plotly_chart(f, use_container_width=True)
 
         with tab3:
-            st.header("RQ3: Micro-Economic Rationality")
+            st.header("RQ3: Smart Pricing & Rationality (Updated)")
+            st.markdown("Comparing **Dynamic Pricing Dynamics** across strategies.")
+            
+            c1, c2 = st.columns(2)
+            with c1: st.plotly_chart(plotter.rq3_price_trend(), use_container_width=True) # NEW
+            with c2: st.plotly_chart(plotter.rq3_demand_loss(), use_container_width=True) # NEW
+            
+            st.divider()
+            st.markdown("#### Micro-Economic Analysis")
             if df_micro is not None:
-                st.plotly_chart(plotter.rq3_bidding_rationality(), use_container_width=True)
-                c1, c2 = st.columns(2)
-                with c1: st.plotly_chart(plotter.rq3_bid_landscape(), use_container_width=True)
-                with c2: st.plotly_chart(plotter.rq3_winning_bid_trend(), use_container_width=True)
-                st.plotly_chart(plotter.rq3_profile_win_rate(), use_container_width=True)
+                c3, c4 = st.columns(2)
+                with c3: st.plotly_chart(plotter.rq3_bidding_rationality(), use_container_width=True)
+                with c4: st.plotly_chart(plotter.rq3_winning_bid_trend(), use_container_width=True)
             else:
-                st.warning("Micro-data missing. Re-run simulation.")
+                st.warning("Micro-data missing.")
             st.plotly_chart(plotter.rq3_welfare_loss(), use_container_width=True)
 
         with tab4:
             st.header("RQ4: Social Equity & Redistribution")
-            st.plotly_chart(plotter.rq4_equity_gap(), use_container_width=True)
-            st.plotly_chart(plotter.rq4_starvation_scatter(), use_container_width=True) # RESTORED
+            
+            st.markdown("#### Who Pays More? Cost Equity Analysis")
+            if df_micro is not None:
+                st.plotly_chart(plotter.rq4_price_paid_by_profile(), use_container_width=True) # NEW
+            
             c1, c2 = st.columns(2)
-            with c1: 
-                f = plotter.rq4_gini_coefficient()
-                if f: st.plotly_chart(f, use_container_width=True)
-            with c2: 
-                f = plotter.rq4_starvation_depth()
-                if f: st.plotly_chart(f, use_container_width=True)
+            with c1: st.plotly_chart(plotter.rq4_equity_gap(), use_container_width=True)
+            with c2: st.plotly_chart(plotter.rq4_starvation_scatter(), use_container_width=True)
             
             st.divider()
             st.subheader("💰 Policy Solution: Redistribution")
             st.plotly_chart(plotter.rq4_subsidy_potential(), use_container_width=True)
-            st.plotly_chart(plotter.rq4_access_rate(), use_container_width=True)
 
 # =========================================================
 # PAGE 4: DATA MANAGER (FIXED ZIP SUPPORT)
@@ -303,13 +307,4 @@ elif page == "5. Discussion & Feasibility":
     2.  **50% of Surplus** is redistributed as a **Discount Token** to drivers who waited > 30 minutes.
     
     This ensures that while wealthy agents buy *Time*, economy agents gain *Purchasing Power*.
-    """)
-    
-    st.divider()
-    
-    st.header("3. Limitations of Study")
-    st.info("""
-    * **Assumption of Rationality:** Real humans may bid irrationally (Winner's Curse) or out of panic.
-    * **Single Station Model:** Does not account for network effects (drivers driving to a neighbor station).
-    * **Perfect Information:** Agents in this sim know the exact queue length. In reality, estimates are noisy.
     """)

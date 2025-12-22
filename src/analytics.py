@@ -57,13 +57,6 @@ class ScientificPlotter:
         fig = px.line(cv, x="Traffic_Load", y="CV", color="Strategy", markers=True, title="<b>Revenue Volatility (CV)</b>", color_discrete_map=self.colors)
         return fig
 
-    def rq1_pricing_dynamics(self):
-        # Estimates Demand Response by plotting Balked Agents (High Price -> High Balking)
-        if "Balked_Agents" in self.df.columns:
-            fig = px.box(self.df, x="Traffic_Load", y="Balked_Agents", color="Strategy", title="<b>Demand Response: Agents refusing High Prices</b>", color_discrete_map=self.colors)
-            return fig
-        return None
-
     # =========================================================================
     # RQ2: SERVICE RELIABILITY
     # =========================================================================
@@ -108,8 +101,33 @@ class ScientificPlotter:
         return None
 
     # =========================================================================
-    # RQ3: MICRO-ECONOMICS
+    # RQ3: MICRO-ECONOMICS & PRICING (UPDATED)
     # =========================================================================
+    
+    def rq3_price_trend(self):
+        """
+        NEW: Shows how System Price increases with Load for BOTH Strategies.
+        Demonstrates that FIFO also suffers from surge pricing, not just SIRQ.
+        """
+        if "Avg_System_Price" in self.df.columns:
+            fig = px.line(self.df.groupby(["Traffic_Load", "Strategy"])["Avg_System_Price"].mean().reset_index(), 
+                          x="Traffic_Load", y="Avg_System_Price", color="Strategy", markers=True, 
+                          title="<b>System Price Evolution ($/kWh)</b>", color_discrete_map=self.colors)
+            return fig
+        return None
+
+    def rq3_demand_loss(self):
+        """
+        NEW: Shows Demand Destruction (Balking) due to High Prices.
+        Compares if one strategy triggers more balking than the other.
+        """
+        if "Balked_Agents" in self.df.columns:
+            fig = px.bar(self.df.groupby(["Traffic_Load", "Strategy"])["Balked_Agents"].mean().reset_index(), 
+                         x="Traffic_Load", y="Balked_Agents", color="Strategy", barmode="group",
+                         title="<b>Demand Destruction (Lost Customers)</b>", color_discrete_map=self.colors)
+            return fig
+        return None
+
     def rq3_bidding_rationality(self):
         if self.df_micro is None: return None
         subset = self.df_micro.sample(n=min(len(self.df_micro), 2000), random_state=42)
@@ -128,14 +146,14 @@ class ScientificPlotter:
     def rq3_bid_landscape(self):
         if self.df_micro is None: return None
         sirq_data = self.df_micro[self.df_micro["Strategy"] == "SIRQ"]
-        fig = px.histogram(sirq_data, x="Bid", color="Profile", barmode="overlay", title="<b>Bid Landscape (SIRQ Only)</b>", color_discrete_map=self.profile_colors)
+        fig = px.histogram(sirq_data, x="Bid", color="Profile", barmode="overlay", title="<b>Bid Landscape (SIRQ)</b>", color_discrete_map=self.profile_colors)
         return fig
 
     def rq3_winning_bid_trend(self):
         if self.df_micro is None: return None
         winners = self.df_micro[(self.df_micro["Strategy"] == "SIRQ") & (self.df_micro["Outcome"].isin(["Completed", "Preempted"]))]
         trend = winners.groupby("Traffic_Load")["Bid"].mean().reset_index()
-        fig = px.line(trend, x="Traffic_Load", y="Bid", markers=True, title="<b>Market Clearing Price (Avg Winning Bid)</b>", color_discrete_sequence=["#2ecc71"])
+        fig = px.line(trend, x="Traffic_Load", y="Bid", markers=True, title="<b>Market Clearing Price (Winning Bids)</b>", color_discrete_sequence=["#2ecc71"])
         return fig
 
     def rq3_profile_win_rate(self):
@@ -143,13 +161,29 @@ class ScientificPlotter:
         counts = self.df_micro[self.df_micro["Strategy"]=="SIRQ"].groupby(["Profile", "Outcome"]).size().unstack(fill_value=0)
         if "Completed" in counts.columns:
             counts["Win_Rate"] = counts["Completed"] / counts.sum(axis=1)
-            fig = px.bar(counts.reset_index(), x="Profile", y="Win_Rate", title="<b>Profile Win Rate (SIRQ)</b>", color="Profile", color_discrete_map=self.profile_colors)
+            fig = px.bar(counts.reset_index(), x="Profile", y="Win_Rate", title="<b>Profile Win Rate</b>", color="Profile", color_discrete_map=self.profile_colors)
             return fig
         return None
 
     # =========================================================================
     # RQ4: SOCIAL IMPACT & EQUITY
     # =========================================================================
+    
+    def rq4_price_paid_by_profile(self):
+        """
+        NEW: Shows exact Avg Price Paid per kWh by Profile.
+        Reveals if Economy users are paying more or less than Critical users.
+        """
+        if self.df_micro is None: return None
+        if "Avg_Price_kWh" in self.df_micro.columns:
+            # Filter for completed sessions only (cost > 0)
+            paid = self.df_micro[self.df_micro["Avg_Price_kWh"] > 0]
+            summary = paid.groupby(["Strategy", "Profile"])["Avg_Price_kWh"].mean().reset_index()
+            fig = px.bar(summary, x="Profile", y="Avg_Price_kWh", color="Strategy", barmode="group",
+                         title="<b>Cost Equity: Who Pays More? ($/kWh)</b>", color_discrete_map=self.colors)
+            return fig
+        return None
+
     def rq4_equity_gap(self):
         self.df["Equity_Gap"] = self.df["Avg_Wait_Economy"] - self.df["Avg_Wait_Critical"]
         summary = self.df.groupby(["Traffic_Load", "Strategy"])["Equity_Gap"].mean().reset_index()
@@ -157,7 +191,7 @@ class ScientificPlotter:
         return fig
     
     def rq4_starvation_scatter(self):
-        # RESTORED: The original scatter plot requested
+        # Scatter plot for Starvation analysis
         fig = px.scatter(self.df, x="Avg_Wait_Critical", y="Avg_Wait_Economy", color="Strategy", facet_col="Traffic_Load", title="<b>Starvation: Economy vs Critical</b>", opacity=0.6, color_discrete_map=self.colors)
         fig.update_layout(template="plotly_white")
         return fig
@@ -173,18 +207,15 @@ class ScientificPlotter:
 
     def rq4_gini_coefficient(self):
         if self.df_micro is None: return None
-        
         def gini(x):
             total = 0
             for i, xi in enumerate(x[:-1], 1):
                 total += np.sum(np.abs(xi - x[i:]))
             return total / (len(x)**2 * np.mean(x)) if len(x) > 0 and np.mean(x) > 0 else 0
-
         ginis = []
         for (load, strat), group in self.df_micro.groupby(["Traffic_Load", "Strategy"]):
             g = gini(group["Wait_Time"].values)
             ginis.append({"Traffic_Load": load, "Strategy": strat, "Gini": g})
-            
         fig = px.line(pd.DataFrame(ginis), x="Traffic_Load", y="Gini", color="Strategy", markers=True, title="<b>Gini Coefficient (Inequality)</b>", color_discrete_map=self.colors)
         return fig
 
@@ -192,11 +223,11 @@ class ScientificPlotter:
         if self.df_micro is None: return None
         eco = self.df_micro[self.df_micro["Profile"] == "ECONOMY"]
         depth = eco.groupby(["Traffic_Load", "Strategy"])["Wait_Time"].max().reset_index()
-        fig = px.bar(depth, x="Traffic_Load", y="Wait_Time", color="Strategy", barmode="group", title="<b>Starvation Depth (Max Economy Wait)</b>", color_discrete_map=self.colors)
+        fig = px.bar(depth, x="Traffic_Load", y="Wait_Time", color="Strategy", barmode="group", title="<b>Starvation Depth (Max Eco Wait)</b>", color_discrete_map=self.colors)
         return fig
     
     def rq4_access_rate(self):
         if self.df_micro is None: return None
         served = self.df_micro[self.df_micro["Outcome"] == "Completed"]
-        fig = px.histogram(served, x="Profile", color="Strategy", barmode="group", title="<b>Service Access Count by Profile</b>", color_discrete_map=self.colors)
+        fig = px.histogram(served, x="Profile", color="Strategy", barmode="group", title="<b>Service Access Count</b>", color_discrete_map=self.colors)
         return fig

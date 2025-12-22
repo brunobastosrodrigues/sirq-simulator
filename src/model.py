@@ -1,9 +1,6 @@
 import mesa
 import pandas as pd
 import numpy as np
-import os
-import datetime
-import json
 from src.agents import TruckAgent
 from src.config import DEFAULT_CONFIG, TRUCK_PROFILES
 
@@ -32,7 +29,7 @@ class ChargingStationModel(mesa.Model):
         self.kpi_revenue = 0
         self.kpi_preemptions = 0
         self.kpi_failed_critical = 0
-        self.kpi_balked_agents = 0  # NEW: Count of lost customers
+        self.kpi_balked_agents = 0  # Count of lost customers due to high price
         
         # State
         self.current_price = self.config["price_per_kwh"]
@@ -158,6 +155,11 @@ class ChargingStationModel(mesa.Model):
         if reason in ["Left (Impatient)", "Preempted"] and agent.profile_type == "CRITICAL":
             self.kpi_failed_critical += 1
         
+        # Calculate Effective Price Paid
+        avg_price_paid = 0
+        if agent.charged_kwh > 0:
+            avg_price_paid = agent.incurred_cost / agent.charged_kwh
+        
         self.agent_log.append({
             "ID": agent.unique_id,
             "Profile": agent.profile_type,
@@ -166,7 +168,9 @@ class ChargingStationModel(mesa.Model):
             "Bid": round(agent.bid, 2),
             "Outcome": reason,
             "Wait_Time": agent.wait_time,
-            "Strategy": self.strategy
+            "Strategy": self.strategy,
+            "Cost_Paid": round(agent.incurred_cost, 2), # NEW
+            "Avg_Price_kWh": round(avg_price_paid, 2)   # NEW
         })
 
     def _log_system_state(self):

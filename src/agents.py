@@ -23,6 +23,10 @@ class TruckAgent(mesa.Agent):
         self.wait_time = 0
         self.status = "Queuing"
         
+        # New Metrics for Smart Pricing Analysis
+        self.charged_kwh = 0.0
+        self.incurred_cost = 0.0
+        
         # --- 4. Rational Bidding Calculation ---
         self._calculate_initial_bid()
 
@@ -34,7 +38,6 @@ class TruckAgent(mesa.Agent):
         base_fee = self.config.get("base_service_fee", 10.0)
         
         # Heuristic: Agents estimate queue wait. 
-        # For simplicity, we assume they see the queue length and guess 15 mins per truck.
         queue_len = len([a for a in self.model.schedule.agents if a.status == "Queuing"])
         estimated_wait_hours = (queue_len * 15) / 60.0 
         
@@ -56,7 +59,6 @@ class TruckAgent(mesa.Agent):
         self.wait_time += 1
         
         # --- Dynamic Bidding (Panic Logic) ---
-        # If I am CRITICAL and I've waited too long, I panic and raise my bid.
         if self.profile_type == "CRITICAL" and self.wait_time % 30 == 0:
             self.bid += (self.value_of_time / 4) 
         
@@ -78,11 +80,15 @@ class TruckAgent(mesa.Agent):
         real_soc = (real_kwh / capacity) * 100
 
         self.soc += real_soc
+        self.charged_kwh += real_kwh # Track Energy
         
         # --- REVENUE CALCULATION (SMART PRICING) ---
         # The revenue is calculated based on the CURRENT dynamic price
         price_to_pay = self.model.current_price
-        self.model.kpi_revenue += (real_kwh * price_to_pay)
+        cost_this_step = (real_kwh * price_to_pay)
+        
+        self.incurred_cost += cost_this_step # Track Cost
+        self.model.kpi_revenue += cost_this_step
 
         if self.soc >= self.target_soc:
             self.model.log_departure(self, "Completed")

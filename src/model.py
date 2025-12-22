@@ -45,7 +45,7 @@ class ChargingStationModel(mesa.Model):
         self._log_system_state()
 
     def _spawn_traffic(self):
-        # Time-of-day logic (Simplified for readability)
+        # Time-of-day logic
         minute = self.schedule.steps % 1440
         hour = minute // 60
         
@@ -58,12 +58,11 @@ class ChargingStationModel(mesa.Model):
             self.current_id += 1
             
             # --- PROFILE SELECTION ---
-            # Use weights from Config
             p_crit = self.config["prob_critical"]
             p_std = self.config["prob_standard"]
             p_eco = self.config["prob_economy"]
             
-            # Normalize just in case user input doesn't sum to 1
+            # Normalize
             total = p_crit + p_std + p_eco
             choices = ["CRITICAL", "STANDARD", "ECONOMY"]
             weights = [p_crit/total, p_std/total, p_eco/total]
@@ -114,7 +113,8 @@ class ChargingStationModel(mesa.Model):
             "Urgency": round(agent.urgency, 3),
             "Bid": agent.bid,
             "Outcome": reason,
-            "Wait_Time": agent.wait_time
+            "Wait_Time": agent.wait_time,
+            "Strategy": self.strategy  # <--- THIS WAS MISSING
         })
 
     def _log_system_state(self):

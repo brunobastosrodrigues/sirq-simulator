@@ -88,7 +88,8 @@ class ScientificPlotter:
 
     def rq2_on_time_performance(self):
         if self.df_micro is not None:
-            crit = self.df_micro[self.df_micro["Profile"] == "CRITICAL"]
+            # FIX: Added .copy() here to prevent SettingWithCopyWarning
+            crit = self.df_micro[self.df_micro["Profile"] == "CRITICAL"].copy()
             # Threshold: 15 mins
             crit["On_Time"] = crit["Wait_Time"] <= 15
             otp = crit.groupby(["Traffic_Load", "Strategy"])["On_Time"].mean().reset_index()

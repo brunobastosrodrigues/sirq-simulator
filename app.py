@@ -40,23 +40,21 @@ if 'monte_carlo_df' not in st.session_state: st.session_state['monte_carlo_df'] 
 if 'agent_level_df' not in st.session_state: st.session_state['agent_level_df'] = None
 if 'current_page' not in st.session_state: st.session_state['current_page'] = "Concept & Demo"
 
-# --- MODERN SIDEBAR NAVIGATION ---
+# --- SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.header("SIRQ Platform")
     st.markdown("---")
     
-    # Modern Navigation using Selectbox instead of Radio
-    # This avoids the "ugly" radio bubbles and looks like a standard dropdown menu
-    page = st.selectbox(
-        "Go to:",
+    # Navigation using radio buttons
+    page = st.radio(
+        "Navigation",
         [
             "Concept & Demo", 
             "Scientific Simulation (Lab)", 
             "Deep Dive Analytics", 
             "Data Manager",
             "Discussion & Feasibility"
-        ],
-        label_visibility="collapsed" # Hides the label for a cleaner look
+        ]
     )
     
     st.markdown("---")
@@ -111,9 +109,9 @@ if page == "Concept & Demo":
         c1, c2 = st.columns([1, 2])
         with c1:
             st.markdown("**Agent Types:**")
-            st.markdown("- <span style='color:red'><b>Critical</b></span>: High Value. Bids aggressively.")
-            st.markdown("- <span style='color:blue'><b>Standard</b></span>: Medium Value.")
-            st.markdown("- <span style='color:grey'><b>Economy</b></span>: Low Value. Price sensitive.")
+            st.markdown("- <span style='color:red'><b>Critical</b></span>: High Value. Bids aggressively.", unsafe_allow_html=True)
+            st.markdown("- <span style='color:blue'><b>Standard</b></span>: Medium Value.", unsafe_allow_html=True)
+            st.markdown("- <span style='color:grey'><b>Economy</b></span>: Low Value. Price sensitive.", unsafe_allow_html=True)
         with c2:
             cc1, cc2, cc3 = st.columns(3)
             with cc1: load = st.select_slider("Traffic Density", ["Normal", "Heavy", "Extreme"], value="Heavy")

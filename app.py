@@ -15,116 +15,160 @@ st.set_page_config(layout="wide", page_title="SIRQ Research Platform", page_icon
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    .big-font { font-size: 20px !important; color: #555; line-height: 1.5; }
-    .highlight { color: #2e86c1; font-weight: bold; }
-    .concept-box { background-color: #f0f8ff; padding: 20px; border-radius: 10px; border-left: 5px solid #2e86c1; margin-bottom: 20px; }
-    .stAlert { border-radius: 8px; }
+    /* Global Font Improvements */
+    .big-font { font-size: 18px !important; color: #444; line-height: 1.6; }
+    .highlight { color: #2e86c1; font-weight: 600; background-color: #e8f4f8; padding: 2px 6px; border-radius: 4px; }
+    
+    /* Modern Concept Box */
+    .concept-box { 
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 25px; 
+        border-radius: 12px; 
+        border-left: 6px solid #2e86c1; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 25px; 
+    }
+    
+    /* Clean Sidebar */
+    .css-1d391kg { padding-top: 1rem; } /* Adjust sidebar padding */
+    div[data-testid="stSidebarNav"] { display: none; } /* Hide default nav if any */
 </style>
 """, unsafe_allow_html=True)
 
 # --- STATE MANAGEMENT ---
 if 'monte_carlo_df' not in st.session_state: st.session_state['monte_carlo_df'] = None
 if 'agent_level_df' not in st.session_state: st.session_state['agent_level_df'] = None
+if 'current_page' not in st.session_state: st.session_state['current_page'] = "Concept & Demo"
 
-st.sidebar.header("⚡ SIRQ Research")
-page = st.sidebar.radio("Navigate", [
-    "1. Concept & Demo", 
-    "2. Scientific Simulation (Lab)", 
-    "3. Deep Dive Analytics", 
-    "4. Data Manager",
-    "5. Discussion & Feasibility"
-])
+# --- MODERN SIDEBAR NAVIGATION ---
+with st.sidebar:
+    st.header("SIRQ Platform")
+    st.markdown("---")
+    
+    # Modern Navigation using Selectbox instead of Radio
+    # This avoids the "ugly" radio bubbles and looks like a standard dropdown menu
+    page = st.selectbox(
+        "Go to:",
+        [
+            "Concept & Demo", 
+            "Scientific Simulation (Lab)", 
+            "Deep Dive Analytics", 
+            "Data Manager",
+            "Discussion & Feasibility"
+        ],
+        label_visibility="collapsed" # Hides the label for a cleaner look
+    )
+    
+    st.markdown("---")
+    st.markdown("**Status:** Ready")
+    st.caption("v2.1.0-ScienceBuild")
 
 # =========================================================
 # PAGE 1: CONCEPT & DEMO
 # =========================================================
-if page == "1. Concept & Demo":
+if page == "Concept & Demo":
     st.title("SIRQ: System for Interactive Reservation and Queueing")
-    st.markdown("#### *A Market-Based Mechanism for Electric Logistics Infrastructure*")
+    st.subheader("Redefining Logistics Infrastructure through Market Mechanics")
     
     st.divider()
 
-    col_text, col_img = st.columns([1.3, 1])
+    col_text, col_img = st.columns([1.2, 1])
     
     with col_text:
         st.markdown("""
         <div class="concept-box">
-        <div class="big-font">
-        <b>The Problem:</b> Traditional "First-Come-First-Served" (FIFO) queues are inefficient for heterogeneous logistics. 
-        <br><br>
-        <b>The Solution:</b> SIRQ implements a <span class="highlight">Real-Time Auction + Smart Pricing</span>. 
-        This comparison evaluates how **Surge Pricing** interacts with both FIFO and Auction strategies.
-        </div>
+            <div class="big-font">
+            <b>The Challenge:</b> 
+            Modern logistics is heterogeneous. A truck carrying <i>perishable vaccines</i> ($150/hr loss) currently waits in the same line as a truck carrying <i>gravel</i> ($20/hr loss). This "First-Come-First-Served" (FIFO) inefficiency costs supply chains billions.
+            <br><br>
+            <b>The SIRQ Proposal:</b> 
+            We replace the physical queue with a <span class="highlight">Virtual Auction</span>. 
+            <br>
+            Incoming vehicles bid for charging slots based on their real-time <b>Value of Time (VOT)</b>.
+            <ul>
+                <li>High-priority cargo (Medical/Cold Chain) can pay a premium to jump the queue.</li>
+                <li>Flexible cargo (Economy) waits or charges during off-peak hours for a discount.</li>
+                <li>Surplus revenue is redistributed to subsidize infrastructure or economy drivers.</li>
+            </ul>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_img:
+        # Placeholder for the visual diagram
+        # [cite_start] [cite: 1]
         if os.path.exists("station_diagram.png"):
-            st.image("station_diagram.png", caption="Fig 1: SIRQ Station Topology", use_column_width=True)
+            st.image("station_diagram.png", caption="Fig 1: SIRQ Auction Logic vs FIFO", use_column_width=True)
+        else:
+             st.info("Visual Diagram Placeholder (station_diagram.png not found)")
 
     # Interactive Demo
     st.divider()
-    st.subheader("🔴 Live Digital Twin")
+    st.subheader("Interactive Digital Twin")
+    st.markdown("Run a live comparison below. Watch how **Critical Agents (Red)** get stuck in FIFO but bypass queues in SIRQ.")
     
-    with st.expander("⚙️ Simulation Settings", expanded=True):
+    with st.expander("⚙️ Configure Simulation Parameters", expanded=True):
         c1, c2 = st.columns([1, 2])
         with c1:
-            st.markdown("**Agent Legend:**")
-            st.markdown("🟥 **Critical (VIP):** High VOT. High Price Tolerance.")
-            st.markdown("🟦 **Standard:** Medium VOT.")
-            st.markdown("⬜ **Economy:** Low VOT. Low Price Tolerance (Will Balk).")
+            st.markdown("**Agent Types:**")
+            st.markdown("- <span style='color:red'><b>Critical</b></span>: High Value. Bids aggressively.")
+            st.markdown("- <span style='color:blue'><b>Standard</b></span>: Medium Value.")
+            st.markdown("- <span style='color:grey'><b>Economy</b></span>: Low Value. Price sensitive.")
         with c2:
             cc1, cc2, cc3 = st.columns(3)
             with cc1: load = st.select_slider("Traffic Density", ["Normal", "Heavy", "Extreme"], value="Heavy")
-            with cc2: speed = st.select_slider("Sim Speed", ["Normal", "Fast"], value="Fast")
+            with cc2: speed = st.select_slider("Animation Speed", ["Normal", "Fast"], value="Fast")
             with cc3: 
                 st.write("")
-                start_btn = st.button("▶️ Run Comparative Demo", type="primary", use_container_width=True)
+                start_btn = st.button("▶️ Start Simulation", type="primary", use_container_width=True)
 
     if start_btn:
         st.write("---")
         load_map = {"Normal": 1.0, "Heavy": 1.2, "Extreme": 1.5}
         cfg = {"traffic_multiplier": load_map[load]}
+        
+        # Initialize Twin Models
         fifo = ChargingStationModel(4, "FIFO", seed=42, user_config=cfg)
         sirq = ChargingStationModel(4, "SIRQ", seed=42, user_config=cfg)
         
         c1, c2 = st.columns(2)
-        with c1: st.subheader("🔵 FIFO (Baseline)"); ph1=st.empty(); m1=st.empty()
-        with c2: st.subheader("🟢 SIRQ (Proposed)"); ph2=st.empty(); m2=st.empty()
+        with c1: st.subheader("Baseline (FIFO)"); ph1=st.empty(); m1=st.empty()
+        with c2: st.subheader("SIRQ (Auction)"); ph2=st.empty(); m2=st.empty()
         
         bar = st.progress(0)
         skip = 5 if speed == "Normal" else 20
-        sleep = 0.05 if speed == "Normal" else 0.001
+        sleep_time = 0.05 if speed == "Normal" else 0.001
         
         for i in range(1440):
             fifo.step(); sirq.step()
             if i % skip == 0:
                 bar.progress((i+1)/1440)
+                # Visual Rendering
                 ph1.markdown(render_station_visual(fifo), unsafe_allow_html=True)
                 ph2.markdown(render_station_visual(sirq), unsafe_allow_html=True)
                 
-                # Show Price in Real-time Metric
+                # Live Metrics
                 m1.info(f"**Rev:** ${int(fifo.kpi_revenue)} | **Failures:** {fifo.kpi_failed_critical}\n\n**Price:** ${fifo.current_price:.2f}/kWh | **Lost:** {fifo.kpi_balked_agents}")
                 m2.success(f"**Rev:** ${int(sirq.kpi_revenue)} | **Failures:** {sirq.kpi_failed_critical}\n\n**Price:** ${sirq.current_price:.2f}/kWh | **Lost:** {sirq.kpi_balked_agents}")
-                time.sleep(sleep)
+                time.sleep(sleep_time)
 
 # =========================================================
 # PAGE 2: SCIENTIFIC SIMULATION
 # =========================================================
-elif page == "2. Scientific Simulation (Lab)":
-    st.title("⚡ Scientific Validation (Monte Carlo)")
-    st.markdown("Run batch simulations to generate statistical evidence.")
+elif page == "Scientific Simulation (Lab)":
+    st.title("Scientific Validation (Monte Carlo)")
+    st.markdown("To prove the hypothesis, we run thousands of iterations across varying traffic loads.")
     
-    with st.expander("ℹ️ Inspect Economic Agent Profiles", expanded=False):
+    with st.expander("View Economic Parameters", expanded=False):
         st.dataframe(pd.DataFrame(TRUCK_PROFILES).T[["vot_range", "patience", "max_price_tolerance"]], use_container_width=True)
     
     with st.form("mc_form"):
         c1, c2 = st.columns(2)
         with c1:
-            n_runs = st.number_input("Iterations (N)", 30, 200, 30)
-            loads = st.multiselect("Traffic Scenarios", [0.8, 1.0, 1.2, 1.5, 2.0], default=[0.8, 1.0, 1.2, 1.5])
+            n_runs = st.number_input("Iterations per Scenario (N)", 30, 200, 30)
+            loads = st.multiselect("Traffic Scenarios (Multiplier)", [0.8, 1.0, 1.2, 1.5, 2.0], default=[0.8, 1.0, 1.2, 1.5])
         with c2:
-            st.markdown("Traffic Mix:")
+            st.markdown("Traffic Composition:")
             pc = st.slider("Critical %", 0.0, 1.0, 0.2); ps = st.slider("Standard %", 0.0, 1.0, 0.6); pe = st.slider("Economy %", 0.0, 1.0, 0.2)
         run_btn = st.form_submit_button("🚀 Run Batch Experiment")
         
@@ -142,13 +186,12 @@ elif page == "2. Scientific Simulation (Lab)":
                     m = ChargingStationModel(4, s, seed=seed, user_config=cfg)
                     for _ in range(1440): m.step()
                     
-                    # Log Summary
+                    # Data Logging
                     log = pd.DataFrame(m.agent_log)
+                    sys_log = pd.DataFrame(m.system_log)
+                    
                     cw = log.query("Profile=='CRITICAL'")['Wait_Time'].mean() if not log.empty else 0
                     ew = log.query("Profile=='ECONOMY'")['Wait_Time'].mean() if not log.empty else 0
-                    
-                    # NEW: Capture Average System Price for the run
-                    sys_log = pd.DataFrame(m.system_log)
                     avg_sys_price = sys_log["Current_Price"].mean() if not sys_log.empty else 0.50
                     
                     results.append({
@@ -158,39 +201,39 @@ elif page == "2. Scientific Simulation (Lab)":
                         "Avg_Wait_Critical": cw, "Avg_Wait_Economy": ew, 
                         "Balked_Agents": m.kpi_balked_agents, 
                         "Preemptions": m.kpi_preemptions,
-                        "Avg_System_Price": avg_sys_price # For Analytics
+                        "Avg_System_Price": avg_sys_price
                     })
                     
-                    # Log Micro (Only 1 run per config to save RAM)
+                    # Micro-log capture (First run only to save memory)
                     if i == 0:
                         log["Run_ID"] = i; log["Traffic_Load"] = l
                         micro_dump.append(log)
                     
-                    curr += 1; 
+                    curr += 1
                     if curr % 5 == 0: prog.progress(curr/total); stat.text(f"Simulating {curr}/{total}")
         
         st.session_state['monte_carlo_df'] = pd.DataFrame(results)
         st.session_state['agent_level_df'] = pd.concat(micro_dump) if micro_dump else None
-        st.success("Batch Complete. Go to 'Deep Dive Analytics'.")
+        st.success("Experiment Complete. Navigate to 'Deep Dive Analytics' to view results.")
 
 # =========================================================
 # PAGE 3: DEEP DIVE ANALYTICS
 # =========================================================
-elif page == "3. Deep Dive Analytics":
-    st.title("📊 Scientific Analytics Suite")
+elif page == "Deep Dive Analytics":
+    st.title("Analytics Suite")
     
     df = st.session_state['monte_carlo_df']
     df_micro = st.session_state['agent_level_df']
     
     if df is None:
-        st.warning("⚠️ No Data Found. Please run the simulation in Tab 2 or Import data in Tab 4.")
+        st.warning("⚠️ No Data. Please run a simulation in the 'Scientific Simulation' tab or Import data.")
     else:
         plotter = ScientificPlotter(df, df_micro)
         
-        tab1, tab2, tab3, tab4 = st.tabs(["RQ1: Efficiency", "RQ2: Reliability", "RQ3: Pricing & Rationality", "RQ4: Equity"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Efficiency (RQ1)", "Reliability (RQ2)", "Rationality (RQ3)", "Equity (RQ4)"])
         
         with tab1:
-            st.header("RQ1: Economic Efficiency & Utilization")
+            st.header("RQ1: Economic Efficiency")
             st.plotly_chart(plotter.rq1_revenue_ci(), use_container_width=True)
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq1_revenue_dist(), use_container_width=True)
@@ -201,7 +244,7 @@ elif page == "3. Deep Dive Analytics":
             with c4: st.plotly_chart(plotter.rq1_revenue_stability(), use_container_width=True)
 
         with tab2:
-            st.header("RQ2: Service Reliability (Critical Chains)")
+            st.header("RQ2: Service Reliability")
             st.plotly_chart(plotter.rq2_critical_wait_box(), use_container_width=True)
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq2_failure_rate(), use_container_width=True)
@@ -216,15 +259,13 @@ elif page == "3. Deep Dive Analytics":
                 if f: st.plotly_chart(f, use_container_width=True)
 
         with tab3:
-            st.header("RQ3: Smart Pricing & Rationality (Updated)")
-            st.markdown("Comparing **Dynamic Pricing Dynamics** across strategies.")
-            
+            st.header("RQ3: Pricing Dynamics")
             c1, c2 = st.columns(2)
-            with c1: st.plotly_chart(plotter.rq3_price_trend(), use_container_width=True) # NEW
-            with c2: st.plotly_chart(plotter.rq3_demand_loss(), use_container_width=True) # NEW
+            with c1: st.plotly_chart(plotter.rq3_price_trend(), use_container_width=True)
+            with c2: st.plotly_chart(plotter.rq3_demand_loss(), use_container_width=True)
             
             st.divider()
-            st.markdown("#### Micro-Economic Analysis")
+            st.subheader("Agent Behavior")
             if df_micro is not None:
                 c3, c4 = st.columns(2)
                 with c3: st.plotly_chart(plotter.rq3_bidding_rationality(), use_container_width=True)
@@ -234,77 +275,76 @@ elif page == "3. Deep Dive Analytics":
             st.plotly_chart(plotter.rq3_welfare_loss(), use_container_width=True)
 
         with tab4:
-            st.header("RQ4: Social Equity & Redistribution")
-            
-            st.markdown("#### Who Pays More? Cost Equity Analysis")
+            st.header("RQ4: Social Equity")
             if df_micro is not None:
-                st.plotly_chart(plotter.rq4_price_paid_by_profile(), use_container_width=True) # NEW
+                st.plotly_chart(plotter.rq4_price_paid_by_profile(), use_container_width=True)
             
             c1, c2 = st.columns(2)
             with c1: st.plotly_chart(plotter.rq4_equity_gap(), use_container_width=True)
             with c2: st.plotly_chart(plotter.rq4_starvation_scatter(), use_container_width=True)
             
             st.divider()
-            st.subheader("💰 Policy Solution: Redistribution")
+            st.subheader("Policy Solution: Redistribution")
             st.plotly_chart(plotter.rq4_subsidy_potential(), use_container_width=True)
 
 # =========================================================
-# PAGE 4: DATA MANAGER (FIXED ZIP SUPPORT)
+# PAGE 4: DATA MANAGER
 # =========================================================
-elif page == "4. Data Manager":
-    st.title("💾 Data Manager (ZIP Support)")
-    st.markdown("Export/Import full experiment data (Summary + Micro-logs) for reproducibility.")
+elif page == "Data Manager":
+    st.title("Data Manager")
+    st.markdown("Export or Import experiment data (ZIP format) to save your work or share with peers.")
     
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("📤 Export Experiment")
+        st.subheader("Export")
         if st.session_state['monte_carlo_df'] is not None:
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr("summary.csv", st.session_state['monte_carlo_df'].to_csv(index=False))
                 if st.session_state['agent_level_df'] is not None:
                     zf.writestr("micro.csv", st.session_state['agent_level_df'].to_csv(index=False))
-            st.download_button("Download Experiment.zip", buf.getvalue(), "sirq_experiment.zip", "application/zip")
+            st.download_button("Download Data (.zip)", buf.getvalue(), "sirq_experiment.zip", "application/zip")
         else:
-            st.info("No data to export.")
+            st.info("No data available to export.")
             
     with c2:
-        st.subheader("📥 Import Experiment")
-        f = st.file_uploader("Upload .zip", type="zip")
+        st.subheader("Import")
+        f = st.file_uploader("Upload .zip file", type="zip")
         if f:
             try:
                 with zipfile.ZipFile(f, "r") as zf:
                     st.session_state['monte_carlo_df'] = pd.read_csv(io.BytesIO(zf.read("summary.csv")))
                     if "micro.csv" in zf.namelist():
                         st.session_state['agent_level_df'] = pd.read_csv(io.BytesIO(zf.read("micro.csv")))
-                st.success("Experiment Loaded! Go to Analytics.")
+                st.success("Data successfully loaded!")
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Import failed: {e}")
 
 # =========================================================
-# PAGE 5: DISCUSSION & FEASIBILITY (NEW)
+# PAGE 5: DISCUSSION
 # =========================================================
-elif page == "5. Discussion & Feasibility":
-    st.title("📝 Discussion: Moving from Theory to Practice")
+elif page == "Discussion & Feasibility":
+    st.title("Discussion: From Theory to Practice")
     
-    st.header("1. Technical Requirements")
+    st.header("Technical Feasibility")
     st.markdown("""
-    To implement SIRQ in the real world, the following technical stack is required:
-    * **OCPP 2.0.1+ Support:** The chargers must support the *Open Charge Point Protocol* (OCPP) to allow remote command overrides and dynamic tariff pushing.
-    * **Low-Latency Edge Computing:** The Auction Engine cannot run solely on the cloud. A local edge controller is recommended to handle bidding resolution within < 500ms.
-    * **Automated Identification (Plug & Charge / ISO 15118):** Trucks must be identified automatically to retrieve their Profile/Wallet. Manual app entry is too slow for high-throughput logistics.
+    Implementing SIRQ in the real world requires specific infrastructure updates:
+    * **OCPP 2.0.1+:** Chargers must support the *Open Charge Point Protocol* (OCPP) for remote command overrides and dynamic tariffs.
+    * **Edge Computing:** An auction engine needs < 500ms latency; a local edge controller is recommended over pure cloud solutions.
+    * **Plug & Charge (ISO 15118):** Automated identification is crucial. Drivers cannot manually bid via app while driving; the truck's computer must auto-negotiate based on pre-set preferences.
     """)
     
     st.divider()
     
-    st.header("2. Social Impact & Policy")
+    st.header("Social Implications")
     st.markdown("""
-    **The Risk:** Without regulation, auction systems can lead to "Energy Gentrification," where small operators (Economy) are permanently excluded from prime-time charging.
+    **The Risk: Energy Gentrification**
+    Without regulation, auctions may exclude small operators (Economy) from charging during prime hours entirely.
     
-    **The Mitigation (The 'Robin Hood' Protocol):**
-    As shown in the Analytics (RQ4), SIRQ generates significant *Surplus Revenue*. A policy enforcement layer can mandate that:
-    1.  **50% of Surplus** is retained by the CPO (Incentive).
-    2.  **50% of Surplus** is redistributed as a **Discount Token** to drivers who waited > 30 minutes.
+    **The Solution: The 'Robin Hood' Protocol**
+    Our analytics (RQ4) show SIRQ generates surplus revenue. We propose a policy where:
+    1. **50% of Surplus** is retained by the Operator (Profit Incentive).
+    2. **50% of Surplus** is redistributed as *Discount Tokens* to drivers who waited > 30 minutes.
     
     This ensures that while wealthy agents buy *Time*, economy agents gain *Purchasing Power*.
     """)

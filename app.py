@@ -228,7 +228,7 @@ elif page == "Deep Dive Analytics":
     else:
         plotter = ScientificPlotter(df, df_micro)
         
-        tab1, tab2, tab3, tab4 = st.tabs(["Efficiency (RQ1)", "Reliability (RQ2)", "Rationality (RQ3)", "Equity (RQ4)"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Efficiency", "Reliability", "Rationality", "Equity", "🔥 Advanced Heatmaps"])
         
         with tab1:
             st.header("RQ1: Economic Efficiency")
@@ -284,6 +284,27 @@ elif page == "Deep Dive Analytics":
             st.divider()
             st.subheader("Policy Solution: Redistribution")
             st.plotly_chart(plotter.rq4_subsidy_potential(), use_container_width=True)
+
+        with tab5:
+            st.header("Sensitivity & Multi-Variable Analysis")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.plotly_chart(plotter.plot_sensitivity_heatmap(metric="Revenue"), use_container_width=True)
+            with col2:
+                st.plotly_chart(plotter.plot_sensitivity_heatmap(metric="Avg_Wait_Critical"), use_container_width=True)
+        
+            st.divider()
+            
+            col3, col4 = st.columns(2)
+            with col3:
+                st.plotly_chart(plotter.plot_correlation_matrix(), use_container_width=True)
+            with col4:
+                st.plotly_chart(plotter.plot_balking_heatmap(), use_container_width=True)
+                
+            st.divider()
+            st.subheader("3D Frontier Analysis")
+            st.plotly_chart(plotter.plot_3d_efficiency_surface(), use_container_width=True)
 
 # =========================================================
 # PAGE 4: DATA MANAGER

@@ -231,3 +231,85 @@ class ScientificPlotter:
         served = self.df_micro[self.df_micro["Outcome"] == "Completed"]
         fig = px.histogram(served, x="Profile", color="Strategy", barmode="group", title="<b>Service Access Count</b>", color_discrete_map=self.colors)
         return fig
+
+    def _apply_science_style(self, fig, title):
+        """Helper to apply consistent styling."""
+        fig.update_layout(title=title, template="plotly_white")
+        return fig
+
+    # =========================================================================
+    # NEW: HEATMAPS & 3D SURFACES (SENSITIVITY ANALYSIS)
+    # =========================================================================
+
+    def plot_sensitivity_heatmap(self, metric="Revenue"):
+        """
+        Generates a Heatmap of Traffic Load vs. Strategy for a specific metric.
+        Great for spotting 'hotspots' of failure or profit.
+        """
+        # Pivot data to get Matrix form: Index=Load, Columns=Strategy, Values=Metric
+        pivot = self.df.pivot_table(index="Traffic_Load", columns="Strategy", values=metric, aggfunc="mean")
+        
+        fig = px.imshow(
+            pivot, 
+            labels=dict(x="Strategy", y="Traffic Load", color=metric),
+            x=pivot.columns,
+            y=pivot.index,
+            aspect="auto",
+            color_continuous_scale="Viridis" if metric == "Revenue" else "RdYlGn_r", # Green is good for Revenue, Red is bad for Wait
+        )
+        return self._apply_science_style(fig, f"<b>Heatmap: {metric} Intensity</b>")
+
+    def plot_correlation_matrix(self):
+        """
+        Micro-Level Correlation Matrix: Shows relationships between Agent variables.
+        Answers: 'Does high VOT actually lead to higher Bids?'
+        """
+        if self.df_micro is None: return None
+        
+        # Select numeric columns relevant to behavior
+        cols = ["Value_of_Time", "Bid", "Wait_Time", "Battery_Needed", "Traffic_Load"]
+        # Filter for existing columns only
+        valid_cols = [c for c in cols if c in self.df_micro.columns]
+        
+        corr = self.df_micro[valid_cols].corr()
+        
+        fig = px.imshow(
+            corr,
+            text_auto=".2f",
+            color_continuous_scale="RdBu_r", # Red = Pos Corr, Blue = Neg Corr
+            zmin=-1, zmax=1,
+        )
+        return self._apply_science_style(fig, "<b>Agent Behavior Correlations</b>")
+
+    def plot_3d_efficiency_surface(self):
+        """
+        3D Surface Plot: Visualizes the 'Efficient Frontier'.
+        X=Load, Y=Wait Time, Z=Revenue.
+        """
+        # Aggregate data
+        agg = self.df.groupby(["Traffic_Load", "Strategy"]).agg({
+            "Revenue": "mean",
+            "Avg_Wait_Critical": "mean"
+        }).reset_index()
+
+        fig = go.Figure()
+
+        # Add a surface/mesh for each strategy
+        for s in self.df["Strategy"].unique():
+            sub = agg[agg["Strategy"] == s]
+            fig.add_trace(go.Scatter3d(x=sub["Traffic_Load"], y=sub["Avg_Wait_Critical"], z=sub["Revenue"], mode='lines+markers', name=s, line=dict(width=5, color=self.colors.get(s)), marker=dict(size=5, color=self.colors.get(s))))
+
+        fig.update_layout(scene=dict(xaxis_title='Traffic Load', yaxis_title='Critical Wait (min)', zaxis_title='Revenue ($)'), margin=dict(l=0, r=0, b=0, t=40))
+        return self._apply_science_style(fig, "<b>3D Efficiency Frontier (Load vs Wait vs Rev)</b>")
+
+    def plot_balking_heatmap(self):
+        """
+        Specific Heatmap to analyze 'Lost Demand' (Balking).
+        Shows where the system becomes too expensive/slow for Economy agents.
+        """
+        if "Balked_Agents" not in self.df.columns: return None
+        
+        pivot = self.df.pivot_table(index="Traffic_Load", columns="Strategy", values="Balked_Agents", aggfunc="mean")
+        
+        fig = px.imshow(pivot, labels=dict(x="Strategy", y="Traffic Load", color="Lost Agents"), color_continuous_scale="Magma", text_auto=".0f")
+        return self._apply_science_style(fig, "<b>Risk Analysis: Lost Customers (Balking)</b>")

@@ -153,9 +153,9 @@ if page == "Concept & Demo":
 # =========================================================
 # PAGE 2: SCIENTIFIC SIMULATION
 # =========================================================
-elif page == "Scientific Simulation (Lab)":
-    st.title("Scientific Validation (Monte Carlo)")
-    st.markdown("To prove the hypothesis, we run thousands of iterations across varying traffic loads.")
+elif page == "Full Simulation":
+    st.title("Monte Carlo Simulation")
+    st.markdown("Run thousands of iterations across varying traffic loads.")
     
     with st.expander("View Economic Parameters", expanded=False):
         st.dataframe(pd.DataFrame(TRUCK_PROFILES).T[["vot_range", "patience", "max_price_tolerance"]], use_container_width=True)
